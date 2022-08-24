@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crimson Song Uploader</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <h1>Crimson Song Uploader</h1><br>
+
+    Song Name <br>
+    <input id="songnamebox" type="text"> <br><br>
+    Creator <br>
+    <input id="creatorbox" type="text"> <br><br>
+    Song Banner <br>
+    <img id="myimg"> <br><br>
+    Image Name <br> <input id="namebox" type="text"> <label id="extlab"></label> <label id="upprogress"></label><br><br>
+    Song File <br> <input id="namebox2" type="text"> <label id="extlab2"></label> <label id="upprogress2"></label><br><br>
+
+    <button id="selbtn">Select Song Banner</button>
+    <button id="selbtn2">Select Song File</button>
+    <button id="upbtn">Upload Song</button>
+    <button id="downbtn">Retrieve Image</button>
+
+    <script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.9.3/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.9.3/firebase-analytics.js";
+    import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.9.3/firebase-storage.js';
+    import { } from 'https://www.gstatic.com/firebasejs/9.9.3/firebase-auth.js';
+    import { getDatabase, ref, set, child, get, update, remove } from 'https://www.gstatic.com/firebasejs/9.9.3/firebase-database.js';
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBtHlJGvOX-dNiyWWUUzheaSl21fD3-WBA",
+        authDomain: "crimsonmusic-b97d9.firebaseapp.com",
+        projectId: "crimsonmusic-b97d9",
+        storageBucket: "crimsonmusic-b97d9.appspot.com",
+        messagingSenderId: "181983859666",
+        appId: "1:181983859666:web:9afcaab406d031dd092e0b",
+        measurementId: "G-V7HPY7PHBR"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+
+        var files = [];
+        var files2 = [];
+        var reader = new FileReader();
+        var reader2 = new FileReader();
+        var songDownload;
+        var imageDownload;
+
+        var songname = document.getElementById('songnamebox');
+        var creator = document.getElementById('creatorbox');
+        var namebox = document.getElementById('namebox');
+        var extlab = document.getElementById('extlab');
+        var extlab2 = document.getElementById('extlab2');
+        var myimg = document.getElementById('myimg');
+        var proglab = document.getElementById('upprogress');
+        var proglab2 = document.getElementById('upprogress2');
+        var SelBtn = document.getElementById('selbtn');
+        var SelBtn2 = document.getElementById('selbtn2');
+        var UpBtn = document.getElementById('upbtn');
+        var DownBtn = document.getElementById('downbtn');
+
+        //IMG UPLOAD
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = e =>{
+            files = e.target.files;
+
+            var extention = GetFileExt(files[0]);
+            var name = GetFileName(files[0]);
+
+            namebox.value = name;
+            extlab.innerHTML = extention;
+
+            reader.readAsDataURL(files[0]);
+        }
+
+        //SONG UPLOAD
+        var input2 = document.createElement('input');
+        input2.type = 'file';
+        input2.onchange = e =>{
+            files2 = e.target.files;
+
+            var extention = GetFileExt(files2[0]);
+            var name = GetFileName(files2[0]);
+
+            namebox2.value = name;
+            extlab2.innerHTML = extention;
+
+            reader2.readAsDataURL(files2[0]);
+        }
+
+        reader.onload = function (){
+            myimg.src = reader.result;
+        }
+
+        //Selection
+
+        function GetFileExt(file){
+            var temp = file.name.split('.');
+            var ext = temp.slice(temp.length-1,temp.length);
+            return '.'+ext[0];
+        }
+
+        function GetFileName(file){
+            var temp = file.name.split('.');
+            var fname = temp.slice(0,-1).join('.');
+            return fname;
+        }
+
+        SelBtn.onclick = function(){
+            input.click();
+        }
+
+        SelBtn2.onclick = function(){
+            input2.click();
+        }
+
+        //Upload process
+
+        async function UploadProcess(){
+            var ImgToUpload = files[0];
+
+            var ImgName = namebox.value + extlab.innerHTML;
+
+            if(!ValidateName()){
+                alert('Ime ne sme satdrzati . # $ [ ]');
+                return;
+            }
+
+            const metaData = {
+                contentType: ImgToUpload.type
+            }
+
+            const storage = getStorage();
+
+            const storageRef = sRef(storage, "Songs/"+ImgName);
+
+            const UploadTask = uploadBytesResumable(storageRef, ImgToUpload, metaData);
+            
+            UploadTask.on('state-changed', (snapshot)=>{
+                var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                proglab.innerHTML = "Upload "+progress+"%";
+            },
+            (error) =>{
+                alert("image not uploaded");
+            },
+            ()=>{
+                getDownloadURL(UploadTask.snapshot.ref).then((downloadURL)=>{
+                    imageDownload = downloadURL;
+                });
+            }
+            );
+        }
+
+        //SONG UPLOAD PROCESS
+
+        async function UploadProcess2(){
+            var SongToUpload = files2[0];
+
+            var SongName = namebox2.value + extlab2.innerHTML;
+
+            if(!ValidateName2()){
+                alert('Ime ne sme satdrzati . # $ [ ]');
+                return;
+            }
+
+            const metaData = {
+                contentType: SongToUpload.type
+            }
+
+            const storage = getStorage();
+
+            const storageRef = sRef(storage, "Songs/"+SongName);
+
+            const UploadTask = uploadBytesResumable(storageRef, SongToUpload, metaData);
+            
+            UploadTask.on('state-changed', (snapshot)=>{
+                var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                proglab2.innerHTML = "Upload "+progress+"%";
+            },
+            (error) =>{
+                alert("image not uploaded");
+            },
+            ()=>{
+                getDownloadURL(UploadTask.snapshot.ref).then((downloadURL)=>{
+                    songDownload = downloadURL;
+                    SaveURLtoRealtimeDB();
+                });
+            }
+            );
+        }
+
+        UpBtn.onclick = function (){
+            UploadProcess();
+            UploadProcess2();
+            namebox.value = null;
+            namebox2.value = null;
+        }
+
+        //Database funktionos
+
+        const realdb = getDatabase();
+
+        function SaveURLtoRealtimeDB(){
+            var name = namebox.value;
+            var ext = extlab.innerHTML;
+            var songName = songname.value;
+            var creatorName = creator.value;
+
+            set(ref(realdb, "Songs/"+name),{
+                SongName: songName,
+                Creator: creatorName,
+                ImageName: (name+ext),
+                ImgUrl: imageDownload,
+                SongURL: songDownload
+            })
+        }
+
+        function GetUrlFromRealtimeDB(URL){
+            var name = namebox.value;
+
+            var dbRef = ref(realdb);
+
+            get(child(dbRef, "ImagesLinks/"+name)).then((snapshot)=>{
+                if(snapshot.exists()){
+                    myimg.src = snapshot.val().ImgUrl;
+                }
+            })
+        }
+
+        function ValidateName(){
+            var regex = /[\.#$\[\]]/
+            return !(regex.test(namebox).value);
+        }
+
+        function ValidateName2(){
+            var regex = /[\.#$\[\]]/
+            return !(regex.test(namebox2).value);
+        }
+
+        DownBtn.onclick = GetUrlFromRealtimeDB;
+
+      </script>
+</body>
+</html>
