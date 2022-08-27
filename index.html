@@ -11,16 +11,19 @@
 
     <h1>Crimson Song Uploader</h1><br>
 
-    Song ID <br>
-    <input id="songidbox" type="text"> <br><br>
     Song Name <br>
     <input id="songnamebox" type="text"> <br><br>
     Creator <br>
     <input id="creatorbox" type="text"> <br><br>
-    Image URL <br><input id="namebox" type="text"> <br><br>
-    Song URL <br><input id="namebox2" type="text"> <br><br>
+    Song Banner <br>
+    <img id="myimg"> <br><br>
+    Image Name <br> <input id="namebox" type="text"> <label id="extlab"></label> <label id="upprogress"></label><br><br>
+    Song File <br> <input id="namebox2" type="text"> <label id="extlab2"></label> <label id="upprogress2"></label><br><br>
 
+    <button id="selbtn">Select Song Banner</button>
+    <button id="selbtn2">Select Song File</button>
     <button id="upbtn">Upload Song</button>
+    <button id="downbtn">Retrieve Image</button>
 
     <script type="module">
 
@@ -51,13 +54,54 @@
         var songDownload;
         var imageDownload;
 
-        var songid = document.getElementById('songidbox');
         var songname = document.getElementById('songnamebox');
         var creator = document.getElementById('creatorbox');
         var namebox = document.getElementById('namebox');
-        var namebox2 = document.getElementById('namebox2');
+        var extlab = document.getElementById('extlab');
+        var extlab2 = document.getElementById('extlab2');
+        var myimg = document.getElementById('myimg');
+        var proglab = document.getElementById('upprogress');
+        var proglab2 = document.getElementById('upprogress2');
+        var SelBtn = document.getElementById('selbtn');
+        var SelBtn2 = document.getElementById('selbtn2');
         var UpBtn = document.getElementById('upbtn');
+        var DownBtn = document.getElementById('downbtn');
 
+        //IMG UPLOAD
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = e =>{
+            files = e.target.files;
+
+            var extention = GetFileExt(files[0]);
+            var name = GetFileName(files[0]);
+
+            namebox.value = name;
+            extlab.innerHTML = extention;
+
+            reader.readAsDataURL(files[0]);
+        }
+
+        //SONG UPLOAD
+        var input2 = document.createElement('input');
+        input2.type = 'file';
+        input2.onchange = e =>{
+            files2 = e.target.files;
+
+            var extention = GetFileExt(files2[0]);
+            var name = GetFileName(files2[0]);
+
+            namebox2.value = name;
+            extlab2.innerHTML = extention;
+
+            reader2.readAsDataURL(files2[0]);
+        }
+
+        reader.onload = function (){
+            myimg.src = reader.result;
+        }
+
+        //Selection
 
         function GetFileExt(file){
             var temp = file.name.split('.');
@@ -71,6 +115,89 @@
             return fname;
         }
 
+        SelBtn.onclick = function(){
+            input.click();
+        }
+
+        SelBtn2.onclick = function(){
+            input2.click();
+        }
+
+        //Upload process
+
+        async function UploadProcess(){
+            var ImgToUpload = files[0];
+
+            var ImgName = namebox.value + extlab.innerHTML;
+
+            if(!ValidateName()){
+                alert('Ime ne sme satdrzati . # $ [ ]');
+                return;
+            }
+
+            const metaData = {
+                contentType: ImgToUpload.type
+            }
+
+            const storage = getStorage();
+
+            const storageRef = sRef(storage, "Songs/"+ImgName);
+
+            const UploadTask = uploadBytesResumable(storageRef, ImgToUpload, metaData);
+            
+            UploadTask.on('state-changed', (snapshot)=>{
+                var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                proglab.innerHTML = "Upload "+progress+"%";
+            },
+            (error) =>{
+                alert("image not uploaded");
+            },
+            ()=>{
+                getDownloadURL(UploadTask.snapshot.ref).then((downloadURL)=>{
+                    imageDownload = downloadURL;
+                });
+            }
+            );
+        }
+
+        //SONG UPLOAD PROCESS
+
+        async function UploadProcess2(){
+            var SongToUpload = files2[0];
+
+            var SongName = namebox2.value + extlab2.innerHTML;
+
+            if(!ValidateName2()){
+                alert('Ime ne sme satdrzati . # $ [ ]');
+                return;
+            }
+
+            const metaData = {
+                contentType: SongToUpload.type
+            }
+
+            const storage = getStorage();
+
+            const storageRef = sRef(storage, "Songs/"+SongName);
+
+            const UploadTask = uploadBytesResumable(storageRef, SongToUpload, metaData);
+            
+            UploadTask.on('state-changed', (snapshot)=>{
+                var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                proglab2.innerHTML = "Upload "+progress+"%";
+            },
+            (error) =>{
+                alert("image not uploaded");
+            },
+            ()=>{
+                getDownloadURL(UploadTask.snapshot.ref).then((downloadURL)=>{
+                    songDownload = downloadURL;
+                    SaveURLtoRealtimeDB();
+                });
+            }
+            );
+        }
+
         UpBtn.onclick = function (){
             UploadProcess();
             UploadProcess2();
@@ -81,17 +208,30 @@
         const realdb = getDatabase();
 
         function SaveURLtoRealtimeDB(){
-            var name = songid.value;
+            var name = namebox.value;
+            console.log('da ' + name);
+            var ext = extlab.innerHTML;
             var songName = songname.value;
             var creatorName = creator.value;
-            var imageDownload = namebox.value;
-            var songDownload = namebox2.value;
 
             set(ref(realdb, "Songs/"+name),{
                 SongName: songName,
                 Creator: creatorName,
+                ImageName: (name+ext),
                 ImgUrl: imageDownload,
                 SongURL: songDownload
+            })
+        }
+
+        function GetUrlFromRealtimeDB(){
+            var name = namebox.value;
+
+            var dbRef = ref(realdb);
+
+            get(child(dbRef, "ImagesLinks/"+name)).then((snapshot)=>{
+                if(snapshot.exists()){
+                    myimg.src = snapshot.val().ImgUrl;
+                }
             })
         }
 
@@ -105,7 +245,7 @@
             return !(regex.test(namebox2).value);
         }
 
-        UpBtn.onclick = SaveURLtoRealtimeDB;
+        DownBtn.onclick = GetUrlFromRealtimeDB;
 
       </script>
 </body>
