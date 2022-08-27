@@ -79,14 +79,14 @@
         function SaveURLtoRealtimeDB(){
             var name = namebox.value;
             console.log('da ' + name);
-            var ext = extlab.innerHTML;
             var songName = songname.value;
             var creatorName = creator.value;
+            var imageDownload = namebox.value;
+            var songDownload = namebox2.value;
 
             set(ref(realdb, "Songs/"+name),{
                 SongName: songName,
                 Creator: creatorName,
-                ImageName: (name+ext),
                 ImgUrl: imageDownload,
                 SongURL: songDownload
             })
