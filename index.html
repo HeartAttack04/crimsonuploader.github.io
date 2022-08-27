@@ -11,6 +11,8 @@
 
     <h1>Crimson Song Uploader</h1><br>
 
+    Song ID <br>
+    <input id="songidbox" type="text"> <br><br>
     Song Name <br>
     <input id="songnamebox" type="text"> <br><br>
     Creator <br>
@@ -49,9 +51,11 @@
         var songDownload;
         var imageDownload;
 
+        var songid = document.getElementById('songidbox');
         var songname = document.getElementById('songnamebox');
         var creator = document.getElementById('creatorbox');
         var namebox = document.getElementById('namebox');
+        var namebox2 = document.getElementById('namebox2');
         var UpBtn = document.getElementById('upbtn');
 
 
@@ -77,8 +81,7 @@
         const realdb = getDatabase();
 
         function SaveURLtoRealtimeDB(){
-            var name = namebox.value;
-            console.log('da ' + name);
+            var name = songid.value;
             var songName = songname.value;
             var creatorName = creator.value;
             var imageDownload = namebox.value;
@@ -101,6 +104,8 @@
             var regex = /[\.#$\[\]]/
             return !(regex.test(namebox2).value);
         }
+
+        UpBtn.onclick = SaveURLtoRealtimeDB;
 
       </script>
 </body>
